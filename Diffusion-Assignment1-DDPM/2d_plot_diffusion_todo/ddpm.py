@@ -3,6 +3,33 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+"""
+<torch.gather의 예시>
+
+# input이 2D 텐서라면
+input = torch.tensor([
+    [10, 11, 12],
+    [20, 21, 22],
+    [30, 31, 32],
+])   # shape (3, 3)
+
+# 우리가 0번째 차원(dim=0)을 기준으로 각 열에서 어떤 행을 뽑아올지 정하는 index
+index = torch.tensor([
+    [2, 0, 1],   # 첫 번째 “행”에서: 열0→row2, 열1→row0, 열2→row1
+    [0, 2, 2],   # 두 번째 “행”에서: 열0→row0, 열1→row2, 열2→row2
+])   # shape (2, 3)
+
+out = torch.gather(input, dim=0, index=index)
+# 결과 shape는 (2,3) 이고, 계산 방식은:
+# out[0,0] = input[ index[0,0] , 0 ] = input[2, 0] = 30
+# out[0,1] = input[ index[0,1] , 1 ] = input[0, 1] = 11
+# ...
+# out[1,2] = input[ index[1,2] , 2 ] = input[2, 2] = 32
+
+print(out)
+# tensor([[30, 11, 22],
+#         [10, 31, 32]])
+"""
 
 def extract(input, t: torch.Tensor, x: torch.Tensor):
     if t.ndim == 0:
@@ -86,8 +113,9 @@ class DiffusionModule(nn.Module):
         ######## TODO ########
         # DO NOT change the code outside this part.
         # Compute xt.
+        
         alphas_prod_t = extract(self.var_scheduler.alphas_cumprod, t, x0)
-        xt = x0
+        xt = x0 * torch.sqrt(alphas_prod_t) + noise * torch.sqrt(1-alphas_prod_t)
 
         #######################
 
