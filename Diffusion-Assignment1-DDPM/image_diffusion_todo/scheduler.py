@@ -14,7 +14,7 @@ class BaseScheduler(nn.Module):
         self.num_inference_timesteps = num_train_timesteps
         self.timesteps = torch.from_numpy(
             np.arange(0, self.num_train_timesteps)[::-1].copy().astype(np.int64)
-        )
+        ).to(torch.device("mps"))
 
         if mode == "linear":
             betas = torch.linspace(beta_1, beta_T, steps=num_train_timesteps)
@@ -86,13 +86,28 @@ class DDPMScheduler(BaseScheduler):
         ######## TODO ########
         # DO NOT change the code outside this part.
         # Assignment 1. Implement the DDPM reverse step.
-        sample_prev = None
+
+        # P_theta 를 구하는거네
+
+        mu_coef = (1/self.alphas.sqrt())
+        mu_coef = self._get_teeth(mu_coef, t)
+
+        eps_theta_coef = ((1-self.alphas_cumprod)/((1-self.alphas_cumprod).sqrt()))
+        eps_theta_coef = self._get_teeth(eps_theta_coef,t)
+
+        #noise_coef = ((1-self.alphas_cumprod[t-1])/((1-self.alphas_cumprod[t]))).sqrt()
+        noise_coef = self._get_teeth(self.sigmas,t)
+
+        noise = torch.randn_like(x_t)
+        sample_prev =  mu_coef * (x_t - eps_theta * eps_theta_coef) + noise_coef * noise
+
         #######################
         
         return sample_prev
     
     # https://nn.labml.ai/diffusion/ddpm/utils.html
-    def _get_teeth(self, consts: torch.Tensor, t: torch.Tensor): # get t th const 
+    def _get_teeth(self, consts: torch.Tensor, t: torch.Tensor): # get t th const   -> 아 이거 아까 extract랑 동일한 함수임 !!!
+        consts = consts.to(t.device)
         const = consts.gather(-1, t)
         return const.reshape(-1, 1, 1, 1)
     
@@ -113,14 +128,21 @@ class DDPMScheduler(BaseScheduler):
             x_t: (`torch.Tensor [B,C,H,W]`): noisy samples at timestep t.
             eps: (`torch.Tensor [B,C,H,W]`): injected noise.
         """
+
+        #print("x_0.shape",x_0.shape)
+        #print("t.shape",t.shape)
         
         if eps is None:
-            eps       = torch.randn(x_0.shape, device='cuda')
+            eps = torch.randn(x_0.shape, device='mps')
 
         ######## TODO ########
         # DO NOT change the code outside this part.
         # Assignment 1. Implement the DDPM forward step.
-        x_t = None
+        
+        alpha_bar = self._get_teeth(self.alphas_cumprod,t)
+
+        x_t = alpha_bar.sqrt() * x_0 + (1-alpha_bar).sqrt() * eps
+
         #######################
 
         return x_t, eps

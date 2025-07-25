@@ -37,8 +37,8 @@ def extract(input, t: torch.Tensor, x: torch.Tensor):
     shape = x.shape
     t = t.long().to(input.device)
     out = torch.gather(input, 0, t)
-    reshape = [t.shape[0]] + [1] * (len(shape) - 1)
-    return out.reshape(*reshape)
+    reshape = [t.shape[0]] + [1] * (len(shape) - 1) ## 파이썬은 이거 리스트 그냥 더해도 append 하는것 처럼 동작
+    return out.reshape(*reshape) ## * 이거 하면 리스트 요소 떼어다가 펼쳐줌
 
 
 class BaseScheduler(nn.Module):
