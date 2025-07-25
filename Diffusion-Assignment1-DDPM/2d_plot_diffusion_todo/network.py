@@ -89,6 +89,7 @@ class SimpleNet(nn.Module):
             dim_hids: dimensions of hidden features
             num_timesteps: number of timesteps
         """
+        
         ######## TODO ########
         # DO NOT change the code outside this part.
         ### 아아아 이게 그거네 그 Unet 부분에 해당하는 부분 !! 그래서 time_step이 똑같은거였음

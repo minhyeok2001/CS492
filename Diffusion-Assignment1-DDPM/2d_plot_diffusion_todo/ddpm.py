@@ -57,7 +57,7 @@ class BaseScheduler(nn.Module):
         self.num_train_timesteps = num_train_timesteps
         self.timesteps = torch.from_numpy(
             np.arange(0, self.num_train_timesteps)[::-1].copy().astype(np.int64)
-        )
+        ).to(torch.device("mps"))
 
         if mode == "linear":
             betas = torch.linspace(beta_1, beta_T, steps=num_train_timesteps)
@@ -71,6 +71,7 @@ class BaseScheduler(nn.Module):
         alphas = 1 - betas
         alphas_cumprod = torch.cumprod(alphas, dim=0)
 
+        #self.register_buffer("timesteps", timesteps)
         self.register_buffer("betas", betas)
         self.register_buffer("alphas", alphas)
         self.register_buffer("alphas_cumprod", alphas_cumprod)
@@ -146,8 +147,14 @@ class DiffusionModule(nn.Module):
         ## 아하 여기서는 reparameterization trick 써서 식 표현하면 되겠다
 
         ## 위에서 eps_factor가 network 앞에 붙는 계수이니까, 뒤에는 noise에 대한 scaling factor 구하면 되겠다
-        noise_factor = extract(self.var_scheduler.betas,t,xt)*(1 - extract(self.var_scheduler.alphas_cumprod, t-1, xt))/(1 - extract(self.var_scheduler.alphas_cumprod, t, xt))
-        noise_factor = noise_factor.sqrt()
+        if t!=0:
+            noise_factor = extract(self.var_scheduler.betas,t,xt)*(1 - extract(self.var_scheduler.alphas_cumprod, t-1, xt))/(1 - extract(self.var_scheduler.alphas_cumprod, t, xt))
+            noise_factor = noise_factor.sqrt()
+        else :
+            noise_factor = 0
+
+        ### 주의 !!!
+        ### 이거 T=0일때 핸들링 안해주면 마지막에 노이즈 잔뜩 뿌려서 문제생김 !!!
 
         scaling_factor = 1/(extract(self.var_scheduler.alphas,t,xt).sqrt())
 
@@ -299,7 +306,7 @@ class DiffusionModule(nn.Module):
         torch.save(dic, file_path)
 
     def load(self, file_path):
-        dic = torch.load(file_path, map_location="cpu")
+        dic = torch.load(file_path, map_location=self.device)
         hparams = dic["hparams"]
         state_dict = dic["state_dict"]
 
