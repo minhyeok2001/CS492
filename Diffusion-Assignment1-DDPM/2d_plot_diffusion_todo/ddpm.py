@@ -113,7 +113,7 @@ class DiffusionModule(nn.Module):
         ######## TODO ########
         # DO NOT change the code outside this part.
         # Compute xt.
-        
+
         alphas_prod_t = extract(self.var_scheduler.alphas_cumprod, t, x0)
         xt = x0 * torch.sqrt(alphas_prod_t) + noise * torch.sqrt(1-alphas_prod_t)
 
@@ -143,7 +143,18 @@ class DiffusionModule(nn.Module):
         ).sqrt()
         eps_theta = self.network(xt, t)
 
-        x_t_prev = xt
+        ## 아하 여기서는 reparameterization trick 써서 식 표현하면 되겠다
+
+        ## 위에서 eps_factor가 network 앞에 붙는 계수이니까, 뒤에는 noise에 대한 scaling factor 구하면 되겠다
+        noise_factor = extract(self.var_scheduler.betas,t,xt)*(1 - extract(self.var_scheduler.alphas_cumprod, t-1, xt))/(1 - extract(self.var_scheduler.alphas_cumprod, t, xt))
+        noise_factor = noise_factor.sqrt()
+
+        scaling_factor = 1/(extract(self.var_scheduler.alphas,t,xt).sqrt())
+
+        ## reparameterization trick 
+
+        noise = torch.randn_like(xt)
+        x_t_prev = scaling_factor*(xt-eps_factor*eps_theta) + noise_factor * noise
 
         #######################
         return x_t_prev
@@ -162,6 +173,16 @@ class DiffusionModule(nn.Module):
         # DO NOT change the code outside this part.
         # sample x0 based on Algorithm 2 of DDPM paper.
         x0_pred = torch.zeros(shape).to(self.device)
+
+        ## 아니 근데 timestep을 모르는데 어떻게 끝까지 reverse를 하는거지 ??
+        ## -> ㅎㅎ.. self.var_sch~.~
+
+        xt_pred = torch.randn_like(x0_pred).to(self.device)
+
+        for time in self.var_scheduler.timesteps:    ## 예상대로라면, 여기서는 [...] 꼴의 1차원 텐서
+            xt_pred = self.p_sample(xt_pred,time)
+            
+        x0_pred = xt_pred
 
         ######################
         return x0_pred
@@ -248,8 +269,21 @@ class DiffusionModule(nn.Module):
             .to(x0.device)
             .long()
         )
+        ## 아 위 과정은 그거네 학습할 time 뽑는거 !! 즉 0~ num_train_timestep 안에서 배치사이즈만큼 뽑는것 
 
-        loss = x0.mean()
+        ## 일단 이 loss가 Mu predictor인지, noise predictor인지, x_0 predictor인지 알아봐야할듯
+        ## -> 앞에서 network.py에서 noise 예측을 했으므로, noise predictor라고 보는게 타당할듯.
+
+        ## 이거 구현 어떻게 해야할지 몰라서 GPT 물어봤는데..
+        ## 내가 헷갈린 포인트 : 내 생각에는, x_0에서 x_t 갈때 생성한 노이즈는 가우시안 분포를 따르긴 한데, 그 앞에 scaling factor가 엄청 많지 않나? 이걸 다 써서 식을 구성해야하나?
+        ## GPT : 그런거 신경쓰지 말고, 어차피 noise predictor이므로 그냥 니가 노이즈를 만들고 그걸 q sample에 주고 그걸 예측하도록 해라
+        
+        gt_noise = torch.randn_like(x0)
+
+        xt = self.q_sample(x0,t,gt_noise)
+        pred_noise = self.network(xt,t)
+        
+        loss = ((gt_noise-pred_noise)**2).mean()
 
         ######################
         return loss

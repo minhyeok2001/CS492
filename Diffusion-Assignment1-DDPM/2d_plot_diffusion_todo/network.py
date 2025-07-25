@@ -59,6 +59,7 @@ class TimeLinear(nn.Module):
         self.dim_in = dim_in
         self.dim_out = dim_out
         self.num_timesteps = num_timesteps
+        ## 이거 원래 안쓰이는거야?
 
         self.time_embedding = TimeEmbedding(dim_out)
         self.fc = nn.Linear(dim_in, dim_out)
@@ -119,7 +120,7 @@ class SimpleNet(nn.Module):
             x = layer(x,t)
             x = F.relu(x)
         
-        x = self.layer[-1](x,t)
+        x = self.layers[-1](x,t)
 
         ######################
         return x
