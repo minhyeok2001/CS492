@@ -22,7 +22,7 @@ class UNet(nn.Module):
         self.cfg_dropout = cfg_dropout
         if use_cfg:
             assert num_classes is not None
-            cdim = tdim
+            cdim = tdim ##  예??? class dim 을 왜 t_dim하고 똑같이 해놓지??
             self.class_embedding = nn.Embedding(num_classes+1, cdim)
 
         self.head = nn.Conv2d(3, ch, kernel_size=3, stride=1, padding=1)
@@ -82,13 +82,19 @@ class UNet(nn.Module):
                 ######## TODO ########
                 # DO NOT change the code outside this part.
                 # Assignment 2-2. Implement random null conditioning in CFG training.
-                raise NotImplementedError("TODO")
+                mask = torch.rand(x.shape[0],device=class_label.device) < self.cfg_dropout
+                #new_class_label = class_label.clone()
+                class_label[mask] = 0
+                #temb += self.class_embedding(class_label)
                 #######################
             
             ######## TODO ########
             # DO NOT change the code outside this part.
             # Assignment 2-1. Implement class conditioning
-            raise NotImplementedError("TODO")
+            
+            # 나 방금 RESNET 모듈 보고왔는데, 따로 class를 두는 곳이 없음. 그냥 이거 내 생각에는 temb랑 같이 짬뽕해서 넣는거같은 느낌이 든다.
+            temb += self.class_embedding(class_label)
+
             #######################
 
         # Downsampling

@@ -86,7 +86,19 @@ class DDPMScheduler(BaseScheduler):
         ######## TODO ########
         # DO NOT change the code outside this part.
         # Assignment 1. Implement the DDPM reverse step.
-        sample_prev = None
+        # P_theta 를 구하는거네
+
+        mu_coef = (1/self.alphas.sqrt())
+        mu_coef = self._get_teeth(mu_coef, t)
+
+        eps_theta_coef = ((1-self.alphas_cumprod)/((1-self.alphas_cumprod).sqrt()))
+        eps_theta_coef = self._get_teeth(eps_theta_coef,t)
+
+        #noise_coef = ((1-self.alphas_cumprod[t-1])/((1-self.alphas_cumprod[t]))).sqrt()
+        noise_coef = self._get_teeth(self.sigmas,t)
+
+        noise = torch.randn_like(x_t)
+        sample_prev =  mu_coef * (x_t - eps_theta * eps_theta_coef) + noise_coef * noise
         #######################
         
         return sample_prev
@@ -120,7 +132,10 @@ class DDPMScheduler(BaseScheduler):
         ######## TODO ########
         # DO NOT change the code outside this part.
         # Assignment 1. Implement the DDPM forward step.
-        x_t = None
+        alpha_bar = self._get_teeth(self.alphas_cumprod,t)
+
+        x_t = alpha_bar.sqrt() * x_0 + (1-alpha_bar).sqrt() * eps
+
         #######################
 
         return x_t, eps
