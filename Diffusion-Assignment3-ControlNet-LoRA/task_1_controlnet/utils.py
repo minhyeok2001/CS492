@@ -17,6 +17,7 @@ def make_train_dataset(args, tokenizer, accelerator):
         dataset = load_dataset(
             args.dataset_name,
             args.dataset_config_name,
+            split="train",  
             cache_dir=args.cache_dir,
         )
     else:

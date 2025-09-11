@@ -1234,8 +1234,16 @@ class UNet2DConditionModel(
         ######## TODO (4-1) ########
         # DO NOT change the code outside this part.
         # Add the residual features from the ControlNet block to 'down_block_res_samples'.
+        # down_block_additional_residuals: (`tuple` of `torch.Tensor`, *optional*):
+        # A tuple of tensors that if specified are added to the residuals of down unet blocks.
+
+        temp = []
         if is_controlnet:
-            pass
+            for unet, controlnet in zip(down_block_res_samples,down_block_additional_residuals):
+               temp.append(unet+controlnet)
+
+            down_block_res_samples = None
+            down_block_res_samples = tuple(temp)
         ######## TODO (4-1) ########
 
         # 4. mid
@@ -1264,7 +1272,9 @@ class UNet2DConditionModel(
             ######## TODO (4-2) ########
             # DO NOT change the code outside this part.
             # Add the residual features from the ControlNet block to 'sample'.
-            pass
+            
+            sample += mid_block_additional_residual
+
             ######## TODO (4-2) ########
 
         # 5. up

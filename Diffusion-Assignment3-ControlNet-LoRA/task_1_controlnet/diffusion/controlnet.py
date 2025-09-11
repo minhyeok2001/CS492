@@ -59,7 +59,9 @@ def zero_convolution(
     # DO NOT change the code outside this part.
     # Return a zero-convolution layer,
     # with the weight & bias initialized as zeros.
-    module = None
+    module = nn.Conv2d(in_channels=in_channels,out_channels=out_channels,kernel_size=kernel_size,stride=stride,padding=padding)
+    torch.nn.init.zeros_(module.weight)
+    torch.nn.init.zeros_(module.bias)
     ######## TODO (1) ########
 
     return module
@@ -460,6 +462,22 @@ class ControlNetModel(ModelMixin, ConfigMixin, FromOriginalModelMixin):
         # Initialize 'controlnet' using the pretrained 'unet' model
         # NOTE: Modules to initialize: 'conv_in', 'time_proj', 'time_embedding', 'down_blocks', 'mid_block'
 
+        ## 1. 만든다 ( 만드는건 바로 위에서 진행 ) 
+        ## 2. weight를 load한다
+
+        ## 위에 파라미터 설명을 참고해보면, 이미 unet에서 받아오면 된다는걸 알 수 있음
+
+        controlnet.conv_in.load_state_dict(unet.conv_in.state_dict())
+
+        controlnet.time_proj.load_state_dict(unet.time_proj.state_dict())
+        controlnet.time_embedding.load_state_dict(unet.time_embedding.state_dict())
+
+        for og_down, control_down in zip(unet.down_blocks, controlnet.down_blocks):
+            control_down.load_state_dict(og_down.state_dict())
+
+        controlnet.mid_block.load_state_dict(unet.mid_block.state_dict())
+
+
         ######## TODO (2) ########
 
         return controlnet
@@ -704,6 +722,8 @@ class ControlNetModel(ModelMixin, ConfigMixin, FromOriginalModelMixin):
 
         # 2. Pre-process
         sample = self.conv_in(sample)
+        
+        ## 여기가 SD encoder block 1 바로 직전부분 
 
         controlnet_cond = self.controlnet_cond_embedding(controlnet_cond)
         sample = sample + controlnet_cond
@@ -745,9 +765,17 @@ class ControlNetModel(ModelMixin, ConfigMixin, FromOriginalModelMixin):
         # Apply zero-convolution to the residual features of each ControlNet block.
         # NOTE: Each 'controlnet_block' is used here.
 
-        down_block_res_samples = None
-        mid_block_res_sample = None
+        ## 이거를 down_block_res_samples 에서 하나씩 꺼내가지고 zero_conv 떄려버리면 굿 아닝교?
+        ## 아 이거 위에 init에서 zero_convolution 호출해서 이미 객체 만들었음. 그거 리스트로 있는게 self.controlnet_down_blocks
 
+        down_temp = []
+        for sample,zero_conv in zip(down_block_res_samples,self.controlnet_down_blocks):
+            down_temp.append(zero_conv(sample))
+            
+        mid_temp = self.controlnet_mid_block(mid_block_res_sample)
+
+        down_block_res_samples = tuple(down_temp)
+        mid_block_res_sample = mid_temp
         ######## TODO (3) ########
 
         # 6. scaling
