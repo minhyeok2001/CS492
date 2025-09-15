@@ -74,7 +74,7 @@ class StableDiffusion(nn.Module):
 
         #print(latents.shape) torch.Size([1, 4, 64, 64])
 
-        t = torch.tensor([random.randint(0, 1000)]).to(torch.long).to(self.device)
+        t = torch.tensor(torch.randint(self.min_step,self.max_step)).to(torch.long).to(self.device)
         gt_noise = torch.randn_like(latents)
         noisy_latents = torch.sqrt(self.alphas[t]) * latents + torch.sqrt(1-self.alphas[t]) * gt_noise
         
