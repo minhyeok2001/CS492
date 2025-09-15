@@ -74,9 +74,11 @@ class StableDiffusion(nn.Module):
 
         #print(latents.shape) torch.Size([1, 4, 64, 64])
 
-        t = torch.tensor(torch.randint(self.min_step,self.max_step)).to(torch.long).to(self.device)
+        
+        t = torch.randint(self.min_step,self.max_step,size=(1,)).to(torch.long).to(self.device)
+        alpha_bar = self.alphas[t].view(1,1,1,1)
         gt_noise = torch.randn_like(latents)
-        noisy_latents = torch.sqrt(self.alphas[t]) * latents + torch.sqrt(1-self.alphas[t]) * gt_noise
+        noisy_latents = torch.sqrt(alpha_bar) * latents + torch.sqrt(1-alpha_bar) * gt_noise
         
         loss = torch.mean(torch.abs(self.get_noise_preds(noisy_latents,t,text_embeddings,guidance_scale)-gt_noise)**2)
         
@@ -90,8 +92,37 @@ class StableDiffusion(nn.Module):
         grad_scale=1,
     ):
         
-        # TODO: Implement the loss function for PDS
-        raise NotImplementedError("PDS is not implemented yet.")
+        B = src_latents.shape[0]
+        
+        t = torch.randint(self.min_step,self.max_step,size=(1,)).to(torch.long).to(self.device)
+
+        gt_noise_t = torch.randn_like(src_latents)
+        gt_noise_tm1 = torch.randn_like(src_latents)
+
+        alpha_bar_t = self.alphas[t].view(B,1,1,1)
+        alpha_bar_tm1 = self.alphas[torch.clamp(t-1,min=0)].view(B,1,1,1)
+
+
+        def forward(x_0,alpha_bar,noise):
+            return torch.sqrt(alpha_bar) * x_0 + torch.sqrt(1-alpha_bar) * noise
+
+        src_x_t = forward(src_latents,alpha_bar_t,gt_noise_t)
+        src_x_tm1 = forward(src_latents,alpha_bar_tm1,gt_noise_tm1)
+
+        tgt_x_t = forward(tgt_latents,alpha_bar_t)
+        tgt_x_tm1 = forward(tgt_latents,alpha_bar_tm1)
+
+        ## 이제 x_t-1과 x_t의 관계를 이용해서 z 식 구하기
+
+        src_mu = self.get_noise_preds(src_x_t,t,src_text_embedding,guidance_scale) + torch.sqrt(alpha_bar_t) * src_latents
+        src_z = (src_x_tm1-src_mu)/(alpha_bar_t)
+
+        tgt_mu = self.get_noise_preds(tgt_x_t,t,tgt_text_embedding,guidance_scale) + torch.sqrt(alpha_bar_t) * tgt_latents
+        tgt_z = (tgt_x_tm1-tgt_mu)/(alpha_bar_t)
+
+        loss = torch.mean(torch.abs(src_z-tgt_z)**2)
+
+        return loss * grad_scale
     
     
     @torch.no_grad()
