@@ -3,6 +3,8 @@ from diffusers import DDIMScheduler, StableDiffusionPipeline
 import torch
 import torch.nn as nn
 
+import random
+
 
 class StableDiffusion(nn.Module):
     def __init__(self, args, t_range=[0.02, 0.98]):
@@ -55,17 +57,33 @@ class StableDiffusion(nn.Module):
         
         return noise_pred
 
-
     def get_sds_loss(
         self, 
         latents,
         text_embeddings, 
-        guidance_scale=100, 
+        guidance_scale=25, 
         grad_scale=1,
     ):
-        
         # TODO: Implement the loss function for SDS
-        raise NotImplementedError("SDS is not implemented yet.")
+
+        ## 일단 t는 timestep list에서 꺼내와야할거같고, gt는 ddim 식에 의해서 결정해야할거같은데
+        ## 그러고나서 깨끗한 latents에 노이즈를 섞고 그걸 맞추는 식으로 구현하자
+
+        #print(self.alphas) ## [0.9991 ... 0.0047]
+        #print(self.alphas.shape)    ## torch.Size([1000])        
+
+        #print(latents.shape) torch.Size([1, 4, 64, 64])
+
+        t = torch.tensor([random.randint(0, 1000)]).to(torch.long).to(self.device)
+        gt_noise = torch.randn_like(latents)
+        noisy_latents = torch.sqrt(self.alphas[t]) * latents + torch.sqrt(1-self.alphas[t]) * gt_noise
+        
+        loss = torch.mean(torch.abs(self.get_noise_preds(noisy_latents,t,text_embeddings,guidance_scale)-gt_noise))
+        
+        return loss
+        
+    def get_gt_noise(self,):
+        self.alphas 
     
     
     def get_pds_loss(

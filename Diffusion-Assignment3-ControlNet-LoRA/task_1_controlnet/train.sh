@@ -14,7 +14,6 @@ accelerate launch train.py \
 --gradient_accumulation_steps=4 \
 --gradient_checkpointing \
 --set_grads_to_none \
---use_8bit_adam \
 --checkpoints_total_limit 2 \
 --validation_steps 100 \
 --report_to "tensorboard"

@@ -12,20 +12,8 @@ def make_train_dataset(args, tokenizer, accelerator):
     In distributed training, the load_dataset function guarantees that only one local process can concurrently
     download the dataset.
     """
-    if args.dataset_name is not None:
-        # Downloading and loading a dataset from the hub.
-        dataset = load_dataset(
-            args.dataset_name,
-            args.dataset_config_name,
-            split="train",  
-            cache_dir=args.cache_dir,
-        )
-    else:
-        if args.train_data_dir is not None:
-            dataset = load_dataset(
-                args.train_data_dir,
-                cache_dir=args.cache_dir,
-            )
+
+    dataset = load_dataset("fusing/fill50k", split="train", trust_remote_code=True)
         # See more about loading custom images at
         # https://huggingface.co/docs/datasets/v2.0.0/en/dataset_script
 
