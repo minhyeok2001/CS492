@@ -74,13 +74,15 @@ class StableDiffusion(nn.Module):
 
         #print(latents.shape) torch.Size([1, 4, 64, 64])
 
+        # 아하 여기서는 latent 자체를 파라미터로 두어가지구 학습을 시키네... 이미지가 텍스트랑 유사해지도록 !!
+        # 즉 랜덤 가우시안 파라미터에서 시작해서, 노이즈를 먹이고 그걸 예측한 그라디언트이 img embedding으로 흐르도록 !! 
         
         t = torch.randint(self.min_step,self.max_step,size=(1,)).to(torch.long).to(self.device)
         alpha_bar = self.alphas[t].view(1,1,1,1)
         gt_noise = torch.randn_like(latents)
         noisy_latents = torch.sqrt(alpha_bar) * latents + torch.sqrt(1-alpha_bar) * gt_noise
         
-        loss = torch.mean(torch.abs(self.get_noise_preds(noisy_latents,t,text_embeddings,guidance_scale)-gt_noise)**2)
+        loss = torch.mean((self.get_noise_preds(noisy_latents,t,text_embeddings,guidance_scale)-gt_noise)**2)
         
         return loss * grad_scale
     
