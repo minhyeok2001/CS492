@@ -109,8 +109,8 @@ class StableDiffusion(nn.Module):
         src_x_t = forward(src_latents,alpha_bar_t,gt_noise_t)
         src_x_tm1 = forward(src_latents,alpha_bar_tm1,gt_noise_tm1)
 
-        tgt_x_t = forward(tgt_latents,alpha_bar_t)
-        tgt_x_tm1 = forward(tgt_latents,alpha_bar_tm1)
+        tgt_x_t = forward(tgt_latents,alpha_bar_t,gt_noise_t)
+        tgt_x_tm1 = forward(tgt_latents,alpha_bar_tm1,gt_noise_tm1)
 
         ## 이제 x_t-1과 x_t의 관계를 이용해서 z 식 구하기
 
