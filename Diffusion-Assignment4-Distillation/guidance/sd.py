@@ -78,12 +78,9 @@ class StableDiffusion(nn.Module):
         gt_noise = torch.randn_like(latents)
         noisy_latents = torch.sqrt(self.alphas[t]) * latents + torch.sqrt(1-self.alphas[t]) * gt_noise
         
-        loss = torch.mean(torch.abs(self.get_noise_preds(noisy_latents,t,text_embeddings,guidance_scale)-gt_noise))
+        loss = torch.mean(torch.abs(self.get_noise_preds(noisy_latents,t,text_embeddings,guidance_scale)-gt_noise)**2)
         
-        return loss
-        
-    def get_gt_noise(self,):
-        self.alphas 
+        return loss * grad_scale
     
     
     def get_pds_loss(
