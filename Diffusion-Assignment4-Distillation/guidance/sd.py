@@ -64,38 +64,38 @@ class StableDiffusion(nn.Module):
         guidance_scale=25, 
         grad_scale=1,
     ):
-        # TODO: Implement the loss function for SDS
 
-        ## 일단 t는 timestep list에서 꺼내와야할거같고, gt는 ddim 식에 의해서 결정해야할거같은데
-        ## 그러고나서 깨끗한 latents에 노이즈를 섞고 그걸 맞추는 식으로 구현하자
-
-        #print(self.alphas) ## [0.9991 ... 0.0047]
-        #print(self.alphas.shape)    ## torch.Size([1000])        
-
-        #print(latents.shape) torch.Size([1, 4, 64, 64])
-
-        # 아하 여기서는 latent 자체를 파라미터로 두어가지구 학습을 시키네... 이미지가 텍스트랑 유사해지도록 !!
-        # 즉 랜덤 가우시안 파라미터에서 시작해서, 노이즈를 먹이고 그걸 예측한 그라디언트이 img embedding으로 흐르도록 !! 
-        
         t = torch.randint(self.min_step,self.max_step,size=(1,)).to(torch.long).to(self.device)
         alpha_bar = self.alphas[t].view(1,1,1,1)
         gt_noise = torch.randn_like(latents)
         noisy_latents = torch.sqrt(alpha_bar) * latents + torch.sqrt(1-alpha_bar) * gt_noise
         
-        loss = torch.mean((self.get_noise_preds(noisy_latents,t,text_embeddings,guidance_scale)-gt_noise)**2)
+        with torch.no_grad():                                   
+          eps_hat = self.get_noise_preds(noisy_latents, t, text_embeddings, guidance_scale)
         
-        return loss * grad_scale
+        ## 헐. 이렇게 안해주면 결국 U-NET 야코비안이 backward시에 자동생성되네? 빼주고싶어도?
+
+        w = 1 - alpha_bar
+        grad = w * (eps_hat - gt_noise) 
+
+        ## 아래에서 최종 loss 정리
+
+        loss = (noisy_latents * grad).mean() * grad_scale
+
+        #loss = torch.mean((eps_hat.detach() - gt_noise)**2)
+        return loss
     
-    
+
+
     def get_pds_loss(
-        self, src_latents, tgt_latents, 
+        self, src_latents, tgt_latents,
         src_text_embedding, tgt_text_embedding,
-        guidance_scale=7.5, 
+        guidance_scale=7.5,
         grad_scale=1,
     ):
-        
+
         B = src_latents.shape[0]
-        
+
         t = torch.randint(self.min_step,self.max_step,size=(1,)).to(torch.long).to(self.device)
 
         gt_noise_t = torch.randn_like(src_latents)
@@ -114,18 +114,40 @@ class StableDiffusion(nn.Module):
         tgt_x_t = forward(tgt_latents,alpha_bar_t,gt_noise_t)
         tgt_x_tm1 = forward(tgt_latents,alpha_bar_tm1,gt_noise_tm1)
 
+        alpha_t  = (alpha_bar_t / alpha_bar_tm1).clamp(min=1e-12, max=1-1e-12)
+        beta_t   = (1.0 - alpha_t).clamp(min=1e-12)
+        sigma2_t = ((1.0 - alpha_bar_tm1) / (1.0 - alpha_bar_t)) * beta_t
+        sigma_t  = torch.sqrt(sigma2_t + 1e-20)
+
         ## 이제 x_t-1과 x_t의 관계를 이용해서 z 식 구하기
+        with torch.no_grad():
+          src_noise = self.get_noise_preds(src_x_t,t,src_text_embedding,guidance_scale)
 
-        src_mu = self.get_noise_preds(src_x_t,t,src_text_embedding,guidance_scale) + torch.sqrt(alpha_bar_t) * src_latents
-        src_z = (src_x_tm1-src_mu)/(alpha_bar_t)
+        src_x0 = (src_x_t - torch.sqrt(1-alpha_bar_t)*src_noise)/torch.sqrt(alpha_bar_t)
+        src_mu = ((torch.sqrt(alpha_bar_tm1) * beta_t / (1.0 - alpha_bar_t)) * src_x0 +(torch.sqrt(alpha_t)* (1.0 - alpha_bar_tm1) / (1.0 - alpha_bar_t)) * src_x_t)
 
-        tgt_mu = self.get_noise_preds(tgt_x_t,t,tgt_text_embedding,guidance_scale) + torch.sqrt(alpha_bar_t) * tgt_latents
-        tgt_z = (tgt_x_tm1-tgt_mu)/(alpha_bar_t)
+        src_z = (src_x_tm1 - src_mu) / sigma_t
 
-        loss = torch.mean(torch.abs(src_z-tgt_z)**2)
+        with torch.no_grad():
+            tgt_noise = self.get_noise_preds(tgt_x_t, t, tgt_text_embedding, guidance_scale)
 
-        return loss * grad_scale
+        tgt_x0 = (tgt_x_t - torch.sqrt(1.0 - alpha_bar_t) * tgt_noise) / torch.sqrt(alpha_bar_t)
+
+        tgt_mu = (
+            (torch.sqrt(alpha_bar_tm1) * beta_t / (1.0 - alpha_bar_t)) * tgt_x0
+            + (torch.sqrt(alpha_t)      * (1.0 - alpha_bar_tm1) / (1.0 - alpha_bar_t)) * tgt_x_t
+        )
+
+        tgt_z = (tgt_x_tm1 - tgt_mu) / sigma_t
+
+        grad_xt = (tgt_z - src_z)               
+        loss = (tgt_x_t * grad_xt).sum(dim=(1,2,3)).mean() * grad_scale
+
+        ## loss = (tgt_z - src_z).pow(2).mean() * grad_scale
+
+        return loss
     
+    ## 이유는 잘 모르겠으나 , MSE하면 안되고 직접 야코비안 제거한 loss를 다시 적분하는 식으로 가야함
     
     @torch.no_grad()
     def decode_latents(self, latents):
