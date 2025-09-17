@@ -116,9 +116,12 @@ class BaseModel(metaclass=ABCMeta):
         Output:
             pred_x0s: [B,*]
         """
-        
-        # TODO: Implement compute_tweedie
-        raise NotImplementedError("compute_tweedie is not implemented yet.")
+
+        ## 넘겨와지는걸 보면, alpha는 cumprod라고 생각하는게 맞을듯 
+
+        pred_x0s =(xts - torch.sqrt(1-alphas[timestep]) * eps) / torch.sqrt(alphas[timestep])
+
+        return pred_x0s
 
         
     def compute_prev_state(
@@ -130,9 +133,11 @@ class BaseModel(metaclass=ABCMeta):
         Output:
             pred_prev_sample: [N,C,H,W]
         """
-        
-        # TODO: Implement compute_prev_state
-        raise NotImplementedError("compute_prev_state is not implemented yet.")
+
+        alpha =kwargs.get("alphas")
+        pred_prev_sample = torch.sqrt(alpha[timestep-1]) * pred_x0s + (torch.sqrt(1-alpha[timestep-1]) / torch.sqrt(1-alpha[timestep])) * (xts - torch.sqrt(alpha[timestep] * pred_x0s))
+
+        return pred_prev_sample
         
     def one_step_process(
         self, input_params, timestep, alphas, sigmas, **kwargs
