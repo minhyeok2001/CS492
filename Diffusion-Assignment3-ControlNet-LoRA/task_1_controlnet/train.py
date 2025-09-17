@@ -616,8 +616,23 @@ def main(args):
     text_encoder.requires_grad_(False)
     controlnet.train()
 
-    if args.gradient_checkpointing:
-        controlnet.enable_gradient_checkpointing()
+    if hasattr(controlnet, "enable_gradient_checkpointing"):
+        try:
+            controlnet.enable_gradient_checkpointing()
+        except TypeError:
+            # 구시그니처: value 위치인자만 받는 경우
+            try:
+                controlnet._set_gradient_checkpointing(True)
+            except TypeError:
+                # 어떤 구버전에선 이름이 다른 케이스
+                if hasattr(controlnet, "gradient_checkpointing_enable"):
+                    controlnet.gradient_checkpointing_enable()
+    else:
+        # 아주 구버전 대비
+        if hasattr(controlnet, "gradient_checkpointing_enable"):
+            controlnet.gradient_checkpointing_enable()
+        elif hasattr(controlnet, "_set_gradient_checkpointing"):
+            controlnet._set_gradient_checkpointing(True)
 
     if args.scale_lr:
         args.learning_rate = (
