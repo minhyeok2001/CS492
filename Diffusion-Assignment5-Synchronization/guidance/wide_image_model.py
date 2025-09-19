@@ -16,7 +16,7 @@ class WideImageModel(BaseModel):
         config,
     ):
         self.config = config
-        self.device = torch.device(f"cuda:{self.config.gpu}")
+        self.device = torch.device("mps")
         super().__init__()
         self.initialize()
         
@@ -86,10 +86,16 @@ class WideImageModel(BaseModel):
             {x_t^i}: [N,C,h,w], where N denotes # of variables.
         """
 
-        # TODO: Implement forward_mapping
-        raise NotImplementedError("forward_mapping is not implemented yet.")
+        patches = []
 
-        return xts
+        for idx, (h_start, h_end, w_start, w_end) in enumerate(self.mapper):
+            patches.append(z_t[:, :, h_start:h_end, w_start:w_end])
+
+        x_ts = torch.stack(patches,dim=0)
+
+        return x_ts
+
+            
         
 
     def inverse_mapping(self, x_ts, **kwargs):
@@ -101,8 +107,25 @@ class WideImageModel(BaseModel):
             z_t: [1,C,H,W]
         """
 
-        # TODO: Implement inverse_mapping
-        raise NotImplementedError("inverse_mapping is not implemented yet.")
+        ## 아마 canonical space로 inverse한다는 의미가 아닐까 하는데,,,,....
+        ## 근데 그러면 평균을 때려야하는데 평균을 어케때리라는거지 -> 이거는 알아서 처리해주는듯 -> ㄴㄴ 그거 아니고 짜야하는거같음
+
+        ## 1. 카운트하고 겹치기
+        self.value.zero_()
+        self.count.zero_() 
+
+
+        for idx, (h_start, h_end, w_start, w_end) in enumerate(self.mapper):
+            self.value[:, :, h_start:h_end, w_start:w_end] += x_ts[idx]
+            self.count[:, :, h_start:h_end, w_start:w_end] += 1
+
+        self.value.unsqueeze(0)
+                
+        # 겹치는 영역은 평균, 나머지는 그대로
+        z_t = torch.where(self.count > 0, self.value / self.count, self.value) 
+
+        return z_t
+
 
 
     def init_prompt_embeddings(
@@ -191,6 +214,7 @@ class WideImageModel(BaseModel):
             for i, t in enumerate(timesteps):
                 func_params["t"]  = t
                 
+                ## 이거 one_step_process가 의미하는게 noise pred -> tweedie's -> posterior mean 과정 한 사이클을 의미함
                 out_params = self.one_step_process(
                     input_params,
                     t,
@@ -213,10 +237,10 @@ class WideImageModel(BaseModel):
 
                 """ Logging """
                 if (i + 1) % self.config.log_step == 0:
-                    log_x_prev_img = self.xs_to_pil_img(log_x_prevs)
-                    log_x0_img = self.xs_to_pil_img(log_x0s)
+                    log_x_prev_img = self.xs_to_pil_img(log_x_prevs) # 이거 파노라마
+                    log_x0_img = self.xs_to_pil_img(log_x0s) # 이것도 파노라마 
 
-                    log_img = merge_images([log_x_prev_img, log_x0_img])
+                    log_img = merge_images([log_x_prev_img, log_x0_img]) ## 아하 이거 보고오니까, 이게 이미지 합쳐주는 애다. 근데 왜 X_t랑 X_0이랑 이어붙임?
                     log_img.save(f"{self.intermediate_dir}/i={i}_t={t}.png")
 
                     for view_idx in range(0, log_x0s.shape[0]):
@@ -262,7 +286,7 @@ class WideImageModel(BaseModel):
         return imgs
 
     @torch.no_grad()
-    def xs_to_pil_img(self, xs):
+    def xs_to_pil_img(self, xs):    ## 아하 이거 보니까, xs에는 그냥 latent 자체로 넣으면 됨 
         """
         Input:
             x: [N,C,h,w]
@@ -277,7 +301,7 @@ class WideImageModel(BaseModel):
             current_latent = xs[view_idx : view_idx + 1]
             decoded_latents.append(self.decode_latents(current_latent).float())
         
-        decoded_latents = torch.cat(decoded_latents, dim=0)
+        decoded_latents = torch.cat(decoded_latents, dim=0) # 그냥 이어붙임
 
         self.rgb_count.zero_()
         self.rgb_value.zero_()
@@ -285,6 +309,6 @@ class WideImageModel(BaseModel):
             self.rgb_value[:, :, h_start:h_end, w_start:w_end] += decoded_latents[i:i+1, ...]
             self.rgb_count[:, :, h_start:h_end, w_start:w_end] += 1
 
-        rgb_pano = torch.where(self.rgb_count > 0, self.rgb_value / self.rgb_count, self.rgb_value)
+        rgb_pano = torch.where(self.rgb_count > 0, self.rgb_value / self.rgb_count, self.rgb_value) ## 아 이거 겹치는부분은 알아서 처리
 
         return TF.to_pil_image(rgb_pano[0].cpu())

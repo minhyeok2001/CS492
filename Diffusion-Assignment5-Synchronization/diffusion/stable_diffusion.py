@@ -17,13 +17,20 @@ class StableDiffusion(StableDiffusionPipeline):
         safety_checker: StableDiffusionSafetyChecker,
         feature_extractor: CLIPImageProcessor,
         requires_safety_checker: bool = True,
-    ):
+        **kwargs,
+    ):  
         
+        kwargs.pop("image_encoder", None)
         super().__init__(
-            vae, text_encoder, tokenizer, unet, 
-            scheduler, safety_checker, 
-            feature_extractor, requires_safety_checker
+            vae=vae,
+            text_encoder=text_encoder,
+            tokenizer=tokenizer,
+            unet=unet,
+            scheduler=scheduler,
+            safety_checker=safety_checker,
+            feature_extractor=feature_extractor,
         )
+        self.requires_safety_checker = True
         
         self.scheduler = scheduler
 
