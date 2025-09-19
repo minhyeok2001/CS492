@@ -16,7 +16,7 @@ class WideImageModel(BaseModel):
         config,
     ):
         self.config = config
-        self.device = torch.device("mps")
+        self.device = torch.device("cuda")
         super().__init__()
         self.initialize()
         
