@@ -8,7 +8,7 @@ device = "mps"
 pipe = StableDiffusionPipeline.from_pretrained(model_id, torch_dtype=torch.float16)
 pipe = pipe.to(device)
 
-prompt = "fancy fender electric guitar"
+prompt = "a man who looks really full"
 image = pipe(prompt).images[0]  
     
-image.save("electric guitar.png")
+image.save("lee.png")

@@ -12,9 +12,8 @@ class Rotate90CWView(BaseView):
         pass
 
     def view(self, im, background=None, **kwargs):
-        # TODO: Implement forward_mapping
-        raise NotImplementedError("forward_mapping is not implemented yet.")
+        return torch.rot90(im, k=-1, dims=(-2, -1))
 
     def inverse_view(self, noise, background=None, **kwargs):
-        # TODO: Implement inverse_mapping
-        raise NotImplementedError("inverse_mapping is not implemented yet.")
+        ## 여기서 노이즈도 동일하게 돌려야하는 이유가?,?
+        return torch.rot90(noise, k=1, dims=(-2, -1))

@@ -183,7 +183,7 @@ class AmbiguousImageModel(BaseModel):
         num_views = len(self.views)
         z_ts = [self.inverse_ft(x_ts[i], i, **kwargs) for i in range(num_views)]
         z_ts = torch.stack(z_ts, 0)
-        z_t = torch.mean(z_ts, 0)
+        z_t = torch.mean(z_ts, 0)    # 아 여기가 거기네? 그 평균때려서 계산하는거
         z_t = z_t.unsqueeze(0)
         
         return z_t
