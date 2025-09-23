@@ -135,7 +135,7 @@ class BaseModel(metaclass=ABCMeta):
         """
 
         alpha =kwargs.get("alphas")
-        pred_prev_sample = torch.sqrt(alpha[timestep-1]) * pred_x0s + (torch.sqrt(1-alpha[timestep-1]) / torch.sqrt(1-alpha[timestep])) * (xts - torch.sqrt(alpha[timestep] * pred_x0s))
+        pred_prev_sample = torch.sqrt(alpha[timestep-1]) * pred_x0s + (torch.sqrt(1-alpha[timestep-1]) / torch.sqrt(1-alpha[timestep])) * (xts - torch.sqrt(alpha[timestep]) * pred_x0s)
 
         return pred_prev_sample
         
