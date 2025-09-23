@@ -91,10 +91,9 @@ class WideImageModel(BaseModel):
         for idx, (h_start, h_end, w_start, w_end) in enumerate(self.mapper):
             patches.append(z_t[:, :, h_start:h_end, w_start:w_end])
 
-        x_ts = torch.stack(patches,dim=0)
+        x_ts = torch.cat(patches,dim=0)
 
         return x_ts
-
             
         
 
@@ -112,17 +111,17 @@ class WideImageModel(BaseModel):
 
         ## 1. 카운트하고 겹치기
         self.value.zero_()
-        self.count.zero_() 
+        self.count.zero_()
 
 
         for idx, (h_start, h_end, w_start, w_end) in enumerate(self.mapper):
-            self.value[:, :, h_start:h_end, w_start:w_end] += x_ts[idx]
+            self.value[:, :, h_start:h_end, w_start:w_end] += x_ts[idx:idx+1,...]
             self.count[:, :, h_start:h_end, w_start:w_end] += 1
 
-        self.value.unsqueeze(0)
-                
+        #self.value.unsqueeze(0)
+
         # 겹치는 영역은 평균, 나머지는 그대로
-        z_t = torch.where(self.count > 0, self.value / self.count, self.value) 
+        z_t = torch.where(self.count > 0, self.value / self.count, self.value)
 
         return z_t
 
