@@ -19,6 +19,8 @@
   <img src="./asset/teaser.png" width="768"/>
 </div>
 
+## Caution  
+- DDIM 과정이므로, q_t-1이 사실 t-1이 아니라 scheduler.timestep [B] 에서 i+1 인덱스를 뽑아서 사용해야함 !!!
 
 ## Description
 Image diffusion models trained on Internet-scale datasets can generate photorealistic images. However, they are limited in generating other types of visual content, such as ambiguous images and arbitrary-sized images that have different representations or resolutions. Diffusion synchronization aims to expand the capabilities of pretrained image diffusion models to produce a wide range of visual content without further finetuning. While pretrained image diffusion models cannot directly generate target visual content, most visual content can be converted into a regular image of a specific size through certain mappings. Diffusion synchronization employs such a bridging function between each type of visual content and fixed-sized images. 
