@@ -150,7 +150,7 @@ class BaseModel(metaclass=ABCMeta):
         timestep_prev = kwargs.get("t_prev").to(xts.device)
 
 
-        pred_prev_sample = torch.sqrt(alpha[timestep_prev]) * pred_x0s + (torch.sqrt(1-alpha[timestep_prev]) / torch.sqrt(1-alpha[timestep_prev])) * (xts - torch.sqrt(alpha[timestep_prev]) * pred_x0s)
+        pred_prev_sample = torch.sqrt(alpha[timestep_prev]) * pred_x0s + (torch.sqrt(1-alpha[timestep_prev]) / torch.sqrt(1-alpha[timestep])) * (xts - torch.sqrt(alpha[timestep]) * pred_x0s)
 
         return pred_prev_sample
         
