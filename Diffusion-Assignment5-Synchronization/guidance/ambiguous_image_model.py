@@ -233,6 +233,7 @@ class AmbiguousImageModel(BaseModel):
 
             xts_input = torch.cat([xts] * 2)
             xts_input = self.stage_1.scheduler.scale_model_input(xts_input, ts)
+            self.model = self.stage_1 
 
             noise_preds = self.stage_1.unet(
                 xts_input,
@@ -305,6 +306,7 @@ class AmbiguousImageModel(BaseModel):
         xts = self.initialize_latent(
             "instance", generator=generator, model=self.stage_2
         )
+        self.model = self.stage_2
         zts = None
         
         previous_stage_imgs = final_denoised
