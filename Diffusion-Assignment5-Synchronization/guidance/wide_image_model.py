@@ -200,8 +200,10 @@ class WideImageModel(BaseModel):
         num_timesteps = self.model.scheduler.config.num_train_timesteps
         num_warmup_steps = len(timesteps) - num_inference_steps * self.model.scheduler.order
         
-        alphas = self.model.scheduler.alphas_cumprod ** (0.5)
-        sigmas = (1 - self.model.scheduler.alphas_cumprod) ** (0.5)
+        ### ??? 이거 알파가 이미 제곱근이 되어있네?.? -> 직접 수정
+        
+        alphas = self.model.scheduler.alphas_cumprod 
+        sigmas = (1 - self.model.scheduler.alphas_cumprod) 
         
         func_params = {
             "num_timesteps": num_timesteps,
