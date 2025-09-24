@@ -222,6 +222,11 @@ class AmbiguousImageModel(BaseModel):
             noise_preds = noise_preds_uncond + self.config.guidance_scale * (
                 noise_preds_text - noise_preds_uncond
             )
+
+            noise_preds = noise_preds_uncond + self.config.guidance_scale * (noise_preds_text - noise_preds_uncond)
+
+            noise_preds = noise_preds[:, :C, ...] 
+    
             noise_preds = noise_preds.reshape(*orig_xts_shape[:-3], -1, H, W)
             
             return noise_preds
