@@ -22,6 +22,14 @@
 ## CAUTION
 이거 loss를 아래 주어진대로 하지말고, jacobian이 제거된 loss로 사용해야함 !! ( no_grad로 unet을 막아도, 직접 jacobian을 뺀 것이 성능이 더 좋았음 empirically.. )
 
+## Result
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/be99ad5b-8aa0-44fc-8621-3a3f71667994" alt="image" width="512" height="512">
+  <br>
+  <em>a dog in the park</em>
+</p>
+
 ## Description
 Score Distillation Sampling (SDS) is a technique used in generative models, particularly in the context of diffusion models. It leverages a pretrained model to guide the generation or editing of target samples by distilling the score (a measure of how well the sample aligns with the target distribution) back into the sampling process. Distillation sampling is particularly useful when pretrained diffusion models cannot directly generate target samples (e.g., 3D objects). In this programming assignment, we will begin with a simple application, 2D image generation using SDS and its variants. Unlike the reverse process of a diffusion model, distillation sampling parameterizes the target content (e.g., images) and optimizes the parameters based on a predefined loss function. Next, we will edit the given source images to align with target prompts using Posterior Distillation Sampling (PDS). 
 
