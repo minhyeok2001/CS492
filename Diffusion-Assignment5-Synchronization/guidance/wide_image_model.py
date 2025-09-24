@@ -96,6 +96,14 @@ class WideImageModel(BaseModel):
 
             patches.append(patch)
 
+        """
+        [mapper 18] h=(0,64), w=(144,208)
+        → patch.shape: torch.Size([1, 4, 64, 64])
+        [mapper 19] h=(0,64), w=(152,216)
+        → patch.shape: torch.Size([1, 4, 64, 64])
+        [mapper 20] h=(0,64), w=(160,224)
+        → patch.shape: torch.Size([1, 4, 64, 64])
+        """
         x_ts = torch.cat(patches, dim=0)
         print(f"forward_mapping 결과 x_ts.shape = {x_ts.shape}")
 
@@ -219,6 +227,7 @@ class WideImageModel(BaseModel):
         with self.model.progress_bar(total=len(timesteps)) as progress_bar:
             for i, t in enumerate(timesteps):
                 func_params["t"]  = t
+                func_params["t_prev"] = timesteps[i+1] if i < len(timesteps) - 1 else t
                 
                 ## 이거 one_step_process가 의미하는게 noise pred -> tweedie's -> posterior mean 과정 한 사이클을 의미함
                 out_params = self.one_step_process(
