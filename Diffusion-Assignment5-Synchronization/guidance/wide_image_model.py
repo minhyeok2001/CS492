@@ -89,10 +89,10 @@ class WideImageModel(BaseModel):
         patches = []
 
         for idx, (h_start, h_end, w_start, w_end) in enumerate(self.mapper):
-            print(f"[mapper {idx}] h=({h_start},{h_end}), w=({w_start},{w_end})")
-
             patch = z_t[:, :, h_start:h_end, w_start:w_end]
-            print(f" → patch.shape: {patch.shape}") 
+            
+            #print(f"[mapper {idx}] h=({h_start},{h_end}), w=({w_start},{w_end})")
+            #print(f" → patch.shape: {patch.shape}") 
 
             patches.append(patch)
 
@@ -105,7 +105,7 @@ class WideImageModel(BaseModel):
         → patch.shape: torch.Size([1, 4, 64, 64])
         """
         x_ts = torch.cat(patches, dim=0)
-        print(f"forward_mapping 결과 x_ts.shape = {x_ts.shape}")
+        #print(f"forward_mapping 결과 x_ts.shape = {x_ts.shape}")
 
         return x_ts
         
