@@ -134,7 +134,7 @@ class WideImageModel(BaseModel):
         #self.value.unsqueeze(0)
 
         # 겹치는 영역은 평균, 나머지는 그대로
-        z_t = torch.where(self.count > 1, self.value / self.count, self.value)
+        z_t = torch.where(self.count > 0, self.value / self.count, self.value)
 
         return z_t
 
