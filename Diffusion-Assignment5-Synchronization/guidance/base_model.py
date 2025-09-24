@@ -119,7 +119,7 @@ class BaseModel(metaclass=ABCMeta):
 
         ## 넘겨와지는걸 보면, alpha는 cumprod라고 생각하는게 맞을듯 
 
-        pred_x0s =(xts - torch.sqrt(1-alphas[timestep]) * eps) / torch.sqrt(alphas[timestep])
+        pred_x0s =(xts - sigmas[timestep] * eps) / alphas[timestep]
 
         return pred_x0s
 
