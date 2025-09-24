@@ -138,7 +138,7 @@ class BaseModel(metaclass=ABCMeta):
 
         alpha = self.model.scheduler.alphas_cumprod.to(xts.device)
 
-        print("alpha~ ", alpha)
+        #print("alpha~ ", alpha)
 
 
         pred_prev_sample = torch.sqrt(alpha[timestep-1]) * pred_x0s + (torch.sqrt(1-alpha[timestep-1]) / torch.sqrt(1-alpha[timestep])) * (xts - torch.sqrt(alpha[timestep]) * pred_x0s)
