@@ -224,8 +224,6 @@ class WideImageModel(BaseModel):
                     **func_params,
                 )
 
-                break
-
                 assert out_params["x_t_1"] != None or out_params["z_t_1"] != None
                 xts = out_params["x_t_1"]
                 zts = self.inverse_mapping(out_params["x_t_1"])
