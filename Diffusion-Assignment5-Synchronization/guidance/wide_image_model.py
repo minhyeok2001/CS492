@@ -201,7 +201,7 @@ class WideImageModel(BaseModel):
         num_warmup_steps = len(timesteps) - num_inference_steps * self.model.scheduler.order
         
         ###
-        
+
         alphas = self.model.scheduler.alphas_cumprod ** (0.5)
         sigmas = (1 - self.model.scheduler.alphas_cumprod) ** (0.5)
         
@@ -223,6 +223,8 @@ class WideImageModel(BaseModel):
                     sigmas,
                     **func_params,
                 )
+
+                break
 
                 assert out_params["x_t_1"] != None or out_params["z_t_1"] != None
                 xts = out_params["x_t_1"]

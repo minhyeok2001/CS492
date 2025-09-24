@@ -118,6 +118,12 @@ class BaseModel(metaclass=ABCMeta):
         """
 
         ## 넘겨와지는걸 보면, alpha는 cumprod라고 생각하는게 맞을듯 
+        origin_alpha = self.model.scheduler.alphas_cumprod.to(xts.device)
+
+        print("sigams", sigmas[timestep])
+        print("function_alpha",alphas[timestep])
+        print("origin_alpha",torch.sqrt(origin_alpha[timestep]))
+        print("origin_sigma",torch.sqrt(1-origin_alpha[timestep]))
 
         pred_x0s =(xts - sigmas[timestep] * eps) / alphas[timestep]
 
