@@ -162,6 +162,7 @@ class BaseModel(metaclass=ABCMeta):
         """
         
         xts = input_params["xts"]
+        ## input_params에는 두개있음 xts, zts
 
         eps_preds = self.compute_noise_preds(xts, timestep, **kwargs)
         x0s = self.compute_tweedie(
@@ -169,8 +170,8 @@ class BaseModel(metaclass=ABCMeta):
         )
         
         # Synchronization using SyncTweedies 
-        #z0s = self.inverse_mapping(x0s, var_type="tweedie", **kwargs) # Comment out to skip synchronization
-        #x0s = self.forward_mapping(z0s, bg=x0s, **kwargs) # Comment out to skip synchronization
+        z0s = self.inverse_mapping(x0s, var_type="tweedie", **kwargs) # Comment out to skip synchronization
+        x0s = self.forward_mapping(z0s, bg=x0s, **kwargs) # Comment out to skip synchronization
         
         x_t_1 = self.compute_prev_state(xts, x0s, timestep, **kwargs)
 

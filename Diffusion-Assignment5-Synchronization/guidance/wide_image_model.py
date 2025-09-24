@@ -89,12 +89,17 @@ class WideImageModel(BaseModel):
         patches = []
 
         for idx, (h_start, h_end, w_start, w_end) in enumerate(self.mapper):
-            patches.append(z_t[:, :, h_start:h_end, w_start:w_end])
+            print(f"[mapper {idx}] h=({h_start},{h_end}), w=({w_start},{w_end})")
 
-        x_ts = torch.cat(patches,dim=0)
+            patch = z_t[:, :, h_start:h_end, w_start:w_end]
+            print(f" → patch.shape: {patch.shape}") 
+
+            patches.append(patch)
+
+        x_ts = torch.cat(patches, dim=0)
+        print(f"forward_mapping 결과 x_ts.shape = {x_ts.shape}")
 
         return x_ts
-            
         
 
     def inverse_mapping(self, x_ts, **kwargs):
@@ -121,7 +126,7 @@ class WideImageModel(BaseModel):
         #self.value.unsqueeze(0)
 
         # 겹치는 영역은 평균, 나머지는 그대로
-        z_t = torch.where(self.count > 0, self.value / self.count, self.value)
+        z_t = torch.where(self.count > 1, self.value / self.count, self.value)
 
         return z_t
 
@@ -163,7 +168,7 @@ class WideImageModel(BaseModel):
         latent = self.model.prepare_latents(
             1, 
             4, 
-            self.latent_canonical_height * 8, 
+            self.latent_canonical_height * 8,   ## 이게 8인 이유는, VAE가 다운샘플링 8배 하기 때문
             self.latent_canonical_width * 8, 
             self.prompt_embeds.dtype, 
             device, 
