@@ -23,7 +23,7 @@
 - DDIM 과정이므로, q_t-1이 사실 t-1이 아니라 scheduler.timestep [B] 에서 i+1 인덱스를 뽑아서 사용해야함 !!!
 
 
-## result
+## Result
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/b41b111b-c9db-4a6a-bac0-be77cac49a01" alt="A sweeping panoramic view of the Grand Canyon at sunset" width="100%">
