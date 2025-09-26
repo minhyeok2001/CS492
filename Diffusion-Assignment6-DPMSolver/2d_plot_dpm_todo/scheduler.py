@@ -72,6 +72,8 @@ class DPMSolverScheduler(BaseScheduler):
         dpm_sigmas = torch.sqrt(1 - self.alphas_cumprod)
         dpm_lambdas = torch.log(dpm_alphas) - torch.log(dpm_sigmas)
 
+        ## 아하 이게 SNR이겠네요
+
         self.register_buffer("dpm_alphas", dpm_alphas)
         self.register_buffer("dpm_sigmas", dpm_sigmas)
         self.register_buffer("dpm_lambdas", dpm_lambdas)
@@ -99,11 +101,16 @@ class DPMSolverScheduler(BaseScheduler):
         """
         inverse function of lambda(t)
         """
+        # ??? 이게 왜필요하지? 일단 코드 의미부터 천천히
+
         log_alpha_array = torch.log(self.dpm_alphas).reshape(1, -1)
         t_array = torch.linspace(0, 1, self.num_train_timesteps+1)[1:].reshape(1,-1).to(log_alpha_array)
         log_alpha = -0.5 * torch.logaddexp(torch.zeros((1,)).to(lamb.device), -2. * lamb)
+        # lambda를 받아서 1과 1^-2lambda를 더하고 -0.5 곱하기 -> 이게 뭔의미 ??? -> 이게 DPM solver에서 log alpha네 !
         t = interpolate_fn(log_alpha.reshape((-1, 1)), torch.flip(log_alpha_array, [1]),
                            torch.flip(t_array, [1]))
+        
+        ## 위에서 구한 alpha에 해당하는 시간 t를 알아내는 과정
 
         """
         Convert continuous t in [1 / N, 1] to discrete one in [0, 1000 * (N-1)/N]
@@ -127,7 +134,19 @@ class DPMSolverScheduler(BaseScheduler):
         ######## TODO ########
         # DO NOT change the code outside this part.
         alpha_s = extract(self.dpm_alphas, s, x_s)
-        x_t = x_s
+        alpha_t = extract(self.dpm_alphas, t, x_s) # 어차피 x_s 넣는 곳은 포맷만 보는거라서 괜찮을듯
+        sigma_t = extract(self.dpm_sigmas, t, x_s)
+        lambda_t = extract(self.dpm_lambdas, t, x_s)
+        lambda_s = extract(self.dpm_lambdas, s, x_s)
+
+        h = lambda_t - lambda_s
+        
+        x_t = alpha_t / alpha_s * x_s - sigma_t * (torch.exp(h) - 1) * eps_theta
+        
+        #print("========================")
+        #print(alpha_s.shape)
+        #  dpm_alphas = torch.sqrt(self.alphas_cumprod) 에서 나왔음
+
         ######################
         return x_t
     
@@ -149,10 +168,17 @@ class DPMSolverScheduler(BaseScheduler):
         lambda_i1 = extract(self.dpm_lambdas, t_i1, x_ti1)
         lambda_i = extract(self.dpm_lambdas, t_i, x_ti1)
         s_i = self.inverse_lambda((lambda_i1 + lambda_i)/2)
+        
+        alpha_s_i = extract(self.dpm_alphas, s_i, x_ti1)
+        alpha_t_i1 = extract(self.dpm_alphas, t_i1, x_ti1) 
+        alpha_t_i = extract(self.dpm_alphas, t_i, x_ti1) 
+        sigma_s_i = extract(self.dpm_sigmas, s_i, x_ti1)
+        sigma_t_i = extract(self.dpm_sigmas, t_i, x_ti1)
 
-        # An example of computing noise prediction inside the function.
-        model_output = self.net_forward_fn(x_ti1, t_i1.to(x_ti1.device))
-        x_ti = x_ti1
+        h = lambda_i - lambda_i1
+        #model_output = self.net_forward_fn(x_ti1, t_i1.to(x_ti1.device))
+        u_i = alpha_s_i/alpha_t_i1 * x_ti1 - sigma_s_i * (torch.exp(h/2) -1) * eps_theta
+        x_ti = alpha_t_i / alpha_t_i1 * x_ti1 - sigma_t_i * (torch.exp(h) -1) * self.net_forward_fn(u_i, s_i.to(u_i.device))
         ######################
 
         return x_ti
@@ -205,7 +231,13 @@ class DPMSolverScheduler(BaseScheduler):
         ######## TODO ########
         # DO NOT change the code outside this part.
         # Assignment 6. Implement the DPM forward step.
-        x_t = x_0
+
+        ## 자자. recall을 해보면, DPM forward의 경우에는, 우선 ODE 꼴로 이루어져있었음 + 이거 SNR만 맞으면 상관없었던거같음
+        # 아 이거 기본 식이 alpha x_0, sigma ^2 였음
+
+        alpha = extract(self.dpm_alphas,t,x_0)
+        sigmas = extract(self.dpm_sigmas,t,x_0)
+        x_t = alpha * x_0 + sigmas**2 * eps
         
         #######################
 

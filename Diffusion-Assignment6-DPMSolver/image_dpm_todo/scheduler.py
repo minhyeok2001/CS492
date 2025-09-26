@@ -136,7 +136,15 @@ class DPMSolverScheduler(BaseScheduler):
         ######## TODO ########
         # DO NOT change the code outside this part.
         alpha_s = extract(self.dpm_alphas, s, x_s)
-        x_t = x_s
+        alpha_t = extract(self.dpm_alphas, t, x_s) # 어차피 x_s 넣는 곳은 포맷만 보는거라서 괜찮을듯
+        sigma_t = extract(self.dpm_sigmas, t, x_s)
+        lambda_t = extract(self.dpm_lambdas, t, x_s)
+        lambda_s = extract(self.dpm_lambdas, s, x_s)
+
+        h = lambda_t - lambda_s
+        
+        x_t = alpha_t / alpha_s * x_s - sigma_t * (torch.exp(h) - 1) * eps_theta
+        
         ######################
         return x_t
 
@@ -161,14 +169,18 @@ class DPMSolverScheduler(BaseScheduler):
         # DO NOT change the code outside this part.
         lambda_i1 = extract(self.dpm_lambdas, t_i1, x_ti1)
         lambda_i = extract(self.dpm_lambdas, t_i, x_ti1)
-        s_i = self.inverse_lambda((lambda_i1 + lambda_i) / 2)
+        s_i = self.inverse_lambda((lambda_i1 + lambda_i)/2)
+        
+        alpha_s_i = extract(self.dpm_alphas, s_i, x_ti1)
+        alpha_t_i1 = extract(self.dpm_alphas, t_i1, x_ti1) 
+        alpha_t_i = extract(self.dpm_alphas, t_i, x_ti1) 
+        sigma_s_i = extract(self.dpm_sigmas, s_i, x_ti1)
+        sigma_t_i = extract(self.dpm_sigmas, t_i, x_ti1)
 
-        # An example of computing noise prediction inside the function.
-        # In Task 2, you need to make it as CFG sampling.
-        model_output = self.net_forward_fn(
-            x_ti1, t_i1.to(x_ti1.device), class_label=class_label
-        )
-        x_ti = x_ti1
+        h = lambda_i - lambda_i1
+        #model_output = self.net_forward_fn(x_ti1, t_i1.to(x_ti1.device))
+        u_i = alpha_s_i/alpha_t_i1 * x_ti1 - sigma_s_i * (torch.exp(h/2) -1) * eps_theta
+        x_ti = alpha_t_i / alpha_t_i1 * x_ti1 - sigma_t_i * (torch.exp(h) -1) * self.net_forward_fn(u_i, s_i.to(u_i.device))
         ######################
 
         return x_ti
