@@ -12,7 +12,7 @@ def main(args):
     save_dir = Path(args.save_dir)
     save_dir.mkdir(exist_ok=True, parents=True)
 
-    device = f"cuda:{args.gpu}"
+    device = f"mps"
 
     dpm = DiffusionModule(None, None)
     dpm.load(args.ckpt_path)
@@ -54,8 +54,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--batch_size", type=int, default=128)
     parser.add_argument("--gpu", type=int, default=0)
-    parser.add_argument("--ckpt_path", type=str)
-    parser.add_argument("--save_dir", type=str)
+    parser.add_argument("--ckpt_path", type=str, default="./last.ckpt")
+    parser.add_argument("--save_dir", type=str, default="./results")
     parser.add_argument("--cfg_scale", type=float, default=7.5)
     parser.add_argument("--dpm_solver_order", type=int, default=1, choices=[1,2])
 
