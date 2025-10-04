@@ -46,8 +46,8 @@ class FMScheduler(nn.Module):
         ######## TODO ########
         # DO NOT change the code outside this part.
         # compute psi_t(x)
-
-        psi_t = x1
+        
+        psi_t = (1-(1-self.sigma_min)*t)*x + t*x1
         ######################
 
         return psi_t
@@ -61,7 +61,12 @@ class FMScheduler(nn.Module):
         ######## TODO ########
         # DO NOT change the code outside this part.
         # implement each step of the first-order Euler method.
-        x_next = xt
+        #print("xt.shape", xt.shape)
+        #print("vt.shape",vt.shape)
+        #print("dt.shape",dt.shape)
+
+        dt = expand_t(dt,xt)
+        x_next = xt + dt * vt
         ######################
 
         return x_next
@@ -93,15 +98,22 @@ class FlowMatching(nn.Module):
         ######## TODO ########
         # DO NOT change the code outside this part.
         # Implement the CFM objective.
+
+        x_t = self.fm_scheduler.compute_psi_t(x1, t, x0)
+
+        target = x1 - (1 - self.fm_scheduler.sigma_min) * x0
+
         if class_label is not None:
-            model_out = self.network(x1, t, class_label=class_label)
+            v_pred = self.network(x_t, t, class_label=class_label)
         else:
-            model_out = self.network(x1, t)
+            v_pred = self.network(x_t, t)
 
-        loss = x1.mean()
+        # 4) MSE
+        loss = ((v_pred - target) ** 2).mean()
+        
         ######################
-
         return loss
+
 
     def conditional_psi_sample(self, x1, t, x0=None):
         if x0 is None:
@@ -143,8 +155,23 @@ class FlowMatching(nn.Module):
             ######## TODO ########
             # Complete the sampling loop
 
-            xt = self.fm_scheduler.step(xt, torch.zeros_like(xt), torch.zeros_like(t))
+            ## dt랑 dv를 넣어야할거같단말이지? dt야 그냥 t- t-1하면 되는거고 dv는 네트워크 출력이신데?
 
+            dt = t_next - timesteps[i] 
+
+            #dt = expand_t(dt,xt)
+
+            #print("xt",xt.shape)
+            #print("dt",dt.shape)
+            #print(timesteps.shape)
+            
+
+            if class_label is not None:
+                model_out = self.network(xt, timesteps[i], class_label=class_label)
+            else:
+                model_out = self.network(xt, timesteps[i])
+
+            xt = self.fm_scheduler.step(xt,model_out,dt)
             ######################
 
             traj[-1] = traj[-1].cpu()
